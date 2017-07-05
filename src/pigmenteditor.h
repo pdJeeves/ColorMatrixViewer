@@ -1,6 +1,7 @@
 #ifndef PIGMENTEDITOR_H
 #define PIGMENTEDITOR_H
 #include <QDialog>
+#include <array>
 
 class MainWindow;
 class QSlider;

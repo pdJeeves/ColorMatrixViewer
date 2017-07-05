@@ -2,6 +2,7 @@
 #define ROTATIONEDITOR_H
 
 #include <QDialog>
+#include <array>
 
 class MainWindow;
 class QSlider;

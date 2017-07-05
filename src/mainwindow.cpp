@@ -182,7 +182,9 @@ void MainWindow::applyAngles()
 {
 	render = QImage(original.size(), QImage::Format_ARGB32);
 	render.fill(0);
-
+#ifndef M_PI
+#define M_PI 3.14159265358
+#endif
 	Quaternion q(angles[0] * M_PI / 128, angles[1] * M_PI / 128, angles[2] * M_PI / 128);
 
 	for(int y = 0; y < original.height(); ++y)
