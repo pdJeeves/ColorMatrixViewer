@@ -19,6 +19,7 @@ class MainWindow : public QMainWindow
 typedef QMainWindow super;
 friend class MatrixEditor;
 friend class RotationEditor;
+friend class PigmentEditor;
 	Q_OBJECT
 
 public:
@@ -28,6 +29,12 @@ public:
 
 	void draw(QPainter & painter, QSize size);
 	bool event(QEvent * event) Q_DECL_OVERRIDE;
+
+	uint8_t matrix[MATRIX_SIZE];
+	uint8_t angles[3];
+	uint8_t pigments[3];
+
+	static float applyPigment(float color, float pigment);
 
 private:
 	void reset();
@@ -44,14 +51,19 @@ private:
 	void editPaste();
 
 	void editMatrix();
+	void editAngles();
+	void editPigments();
+
 	void applyMatrix();
+	void applyAngles();
+	void applyPigments();
+
+	void onNegate();
 
 	bool openFile(QImage *slot, QImage * other, const QString & filename);
 	bool saveFile(const QString & filename);
 
 
-	uint8_t matrix[MATRIX_SIZE];
-	uint8_t angles[3];
 
 	QString filename;
 

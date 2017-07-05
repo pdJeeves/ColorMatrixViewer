@@ -11,9 +11,12 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QDir>
+#include <cmath>
+#include "quaternion.h"
 
 #include "matrixeditor.h"
 #include "rotationeditor.h"
+#include "pigmenteditor.h"
 
 const static double zoomFactor = .8;
 
@@ -26,6 +29,8 @@ ui(new Ui::MainWindow)
 	reset();
 
 	connect(ui->actionEdit_Matrix, &QAction::triggered, this, &MainWindow::editMatrix);
+	connect(ui->actionEdit_Angles, &QAction::triggered, this, &MainWindow::editAngles);
+	connect(ui->actionEdit_Pigments, &QAction::triggered, this, &MainWindow::editPigments);
 
 	connect(ui->actionClose, &QAction::triggered, this, &MainWindow::documentClose);
 	connect(ui->actionNew, &QAction::triggered, this, &MainWindow::documentNew);
@@ -35,6 +40,7 @@ ui(new Ui::MainWindow)
 	connect(ui->actionSave_As, &QAction::triggered, this, &MainWindow::documentSaveAs);
 
 	connect(ui->actionReload, &QAction::triggered, this, &MainWindow::reset);
+	connect(ui->actionNegate, &QAction::triggered, this, &MainWindow::onNegate);
 
 	connect(ui->actionZoom_Out, &QAction::triggered, this, [this]() { zoom *= zoomFactor; ui->widget->repaint(); });
 	connect(ui->actionZoom_In, &QAction::triggered, this, [this]() { zoom *= 1 / zoomFactor; ui->widget->repaint(); });
@@ -55,6 +61,7 @@ void MainWindow::reset()
 {
 	memset(matrix, 0, MATRIX_SIZE);
 	memset(angles, 0, sizeof(angles));
+	memset(pigments, 128, sizeof(pigments));
 
 	for(size_t y = 0; y < MATRIX_ROWS; ++y)
 	{
@@ -78,6 +85,30 @@ uint8_t multiplyRow(const float * row, const uint8_t * colors)
 	return r < 0? 0 : r < 255? (uint8_t) r : 255;
 }
 
+
+void MainWindow::onNegate()
+{
+	render = QImage(original.size(), QImage::Format_ARGB32);
+	render.fill(0);
+
+	for(int y = 0; y < original.height(); ++y)
+	{
+		for(int x = 0; x < original.width(); ++x)
+		{
+			QRgb pixel = original.pixel(x, y);
+
+			if(qAlpha(pixel) == 0)
+			{
+				continue;
+			}
+
+			pixel = qRgba(-qRed(pixel) & 0xFF, -qGreen(pixel) & 0xFF, -qBlue(pixel) & 0xFF, qAlpha(pixel));
+			render.setPixel(x, y, pixel);
+		}
+	}
+
+	ui->widget->repaint();
+}
 
 void MainWindow::applyMatrix()
 {
@@ -146,6 +177,123 @@ void MainWindow::applyMatrix()
 		}
 	}
 }
+
+void MainWindow::applyAngles()
+{
+	render = QImage(original.size(), QImage::Format_ARGB32);
+	render.fill(0);
+
+	Quaternion q(angles[0] * M_PI / 128, angles[1] * M_PI / 128, angles[2] * M_PI / 128);
+
+	for(int y = 0; y < original.height(); ++y)
+	{
+		for(int x = 0; x < original.width(); ++x)
+		{
+			QRgb pixel = original.pixel(x, y);
+
+			if(qAlpha(pixel) == 0)
+			{
+				continue;
+			}
+
+			Vector3 c = Vector3::fromColor(qRed(pixel), qGreen(pixel), qBlue(pixel));
+			c = q.rotate(c);
+			pixel = qRgba(c.red(), c.green(), c.blue(), qAlpha(pixel));
+			render.setPixel(x, y, pixel);
+		}
+	}
+}
+
+float MainWindow::applyPigment(float color, float pigment)
+{
+	return std::max(0.f, color + (pigment-128)/255.f);
+
+	/*
+	color   /= 255;
+	pigment /= 255;
+
+	float c = color;
+
+	if(pigment < .5)
+	{
+		c = c*c*(pigment+.5);
+		c = sqrt(c);
+	}
+	else
+	{
+		pigment = 1-pigment;
+		c = 1 - c*c;
+		c = c*(pigment+.5);
+		c = sqrt(1-c);
+	}
+
+	return 255*c;
+	*/
+}
+
+
+void MainWindow::applyPigments()
+{/*
+	if(pigments[0] == 128 && pigments[1] == 128 && pigments[2] == 128)
+	{
+		render = original;
+		return;
+	}*/
+
+	render = QImage(original.size(), QImage::Format_ARGB32);
+	render.fill(0);
+
+	for(int y = 0; y < original.height(); ++y)
+	{
+		for(int x = 0; x < original.width(); ++x)
+		{
+			QRgb pixel = original.pixel(x, y);
+
+			if(qAlpha(pixel) == 0)
+			{
+				continue;
+			}
+
+//get rgb as floats
+			float r = qRed(pixel)/255.f;
+			float g = qGreen(pixel)/255.f;
+			float b = qBlue(pixel)/255.f;
+
+//get luminance
+			float Y = sqrt(r*r + g*g + b*b);
+
+			if(!Y)
+			{
+				render.setPixel(x, y, pixel);
+				continue;
+			}
+
+			r = applyPigment(r/Y, pigments[0]);
+			g = applyPigment(g/Y, pigments[1]);
+			b = applyPigment(b/Y, pigments[2]);
+
+//correct luminance
+			float length = sqrt(r*r + g*g + b*b);
+			if(length)
+			{
+				Y = Y/length;
+//correct color
+				r = r*Y;
+				g = g*Y;
+				b = b*Y;
+			}
+
+			r = std::max(0, std::min(255, (int) (r*255)));
+			g = std::max(0, std::min(255, (int) (g*255)));
+			b = std::max(0, std::min(255, (int) (b*255)));
+
+			pixel = qRgba(r, g, b, qAlpha(pixel));
+			render.setPixel(x, y, pixel);
+		}
+	}
+}
+
+
 
 static void initializeImageFileDialog(QFileDialog &dialog, QFileDialog::AcceptMode acceptMode)
 {
@@ -270,6 +418,21 @@ void MainWindow::editMatrix()
 	dialog.exec();
 }
 
+void MainWindow::editAngles()
+{
+	RotationEditor dialog(this);
+	dialog.show();
+	dialog.exec();
+}
+
+void MainWindow::editPigments()
+{
+	PigmentEditor dialog(this);
+	dialog.show();
+	dialog.exec();
+}
+
+
 void MainWindow::editCopy()
 {
 	#ifndef QT_NO_CLIPBOARD
@@ -354,7 +517,7 @@ bool MainWindow::event(QEvent * event)
 			if(wheel->orientation() == Qt::Vertical)
 			{
 				double angle = wheel->angleDelta().y();
-				double factor = pow(1.0015, angle);
+				double factor = std::pow(1.0015, angle);
 				zoom *= factor;
 				ui->widget->repaint();
 			}

@@ -29,7 +29,7 @@ ui(new Ui::MatrixEditor)
 	spinBox[13] = ui->spinBox_14;
 	spinBox[14] = ui->spinBox_15;
 
-	for(size_t i = 0; i < MATRIX_SIZE; ++i)
+	for(size_t i = 0; i < spinBox.size(); ++i)
 	{
 		spinBox[i]->setValue(window->matrix[i]);
 		connect(spinBox[i], SIGNAL(valueChanged(int)), this, SLOT(updateMatrixDisplay(int)));
@@ -61,7 +61,7 @@ void MatrixEditor::rejected()
 
 void MatrixEditor::updateMatrixDisplay(int)
 {
-	for(size_t i = 0; i < MATRIX_SIZE; ++i)
+	for(size_t i = 0; i < spinBox.size(); ++i)
 	{
 		window->matrix[i] = spinBox[i]->value();
 	}

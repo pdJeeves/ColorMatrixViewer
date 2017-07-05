@@ -17,13 +17,20 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     viewwidget.cpp \
     matrixeditor.cpp \
-    rotationeditor.cpp
+    rotationeditor.cpp \
+    quaternion.cpp \
+    vector3.cpp \
+    pigmenteditor.cpp
 
 HEADERS  += mainwindow.h \
     viewwidget.h \
     matrixeditor.h \
-    rotationeditor.h
+    rotationeditor.h \
+    quaternion.h \
+    vector3.h \
+    pigmenteditor.h
 
 FORMS    += mainwindow.ui \
     matrixeditor.ui \
-    rotationeditor.ui
+    rotationeditor.ui \
+    pigmenteditor.ui
