@@ -17,6 +17,7 @@
 #include "matrixeditor.h"
 #include "rotationeditor.h"
 #include "pigmenteditor.h"
+#include <iostream>
 
 const static double zoomFactor = .8;
 
@@ -199,7 +200,10 @@ void MainWindow::applyAngles()
 			}
 
 			Vector3 c = Vector3::fromColor(qRed(pixel), qGreen(pixel), qBlue(pixel));
+			float length = c.length();
 			c = q.rotate(c);
+			c.normalize();
+			c = c * length;
 			pixel = qRgba(c.red(), c.green(), c.blue(), qAlpha(pixel));
 			render.setPixel(x, y, pixel);
 		}
@@ -233,14 +237,94 @@ float MainWindow::applyPigment(float color, float pigment)
 	*/
 }
 
+Vector3 TransformHSV(
+        const Vector3 &in,  // color to transform
+        float H,          // hue shift (in degrees)
+        float S,          // saturation multiplier (scalar)
+        float V           // value multiplier (scalar)
+    )
+{
+
+
+    float VSU = V*S*cos(H);
+    float VSW = V*S*sin(H);
+
+    Vector3 ret;
+    ret.x = (.299*V+.701*VSU+.168*VSW)*in.x
+        + (.587*V-.587*VSU+.330*VSW)*in.y
+        + (.114*V-.114*VSU-.497*VSW)*in.z;
+    ret.y = (.299*V-.299*VSU-.328*VSW)*in.x
+        + (.587*V+.413*VSU+.035*VSW)*in.y
+        + (.114*V-.114*VSU+.292*VSW)*in.z;
+    ret.z = (.299*V-.3*VSU+1.25*VSW)*in.x
+        + (.587*V-.588*VSU-1.05*VSW)*in.y
+        + (.114*V+.886*VSU-.203*VSW)*in.z;
+    return ret;
+}
+
+Vector3 TransformByExample(
+        const Vector3 &in,  // color to transform
+        const Vector3 &r,   // pre-transformed red
+        const Vector3 &g,   // pre-transformed green
+        const Vector3 &b,   // pre-transformed blue
+        float m  // Maximum value for a channel
+    )
+{
+    Vector3 ret;
+    ret.x = in.dot(r)/m;
+    ret.y = in.dot(g)/m;
+    ret.z = in.dot(b)/m;
+    return ret;
+}
+
+float GetHue(float r, float g, float b, float & saturation)
+{
+	saturation = 0;
+
+	if(r == g && g == b)
+	{
+		return 0;
+	}
+	else if(r >= g && r >= b)
+	{
+		float min = std::min(g, b);
+		saturation = (r - min)/r;
+
+		float h = (g - b)/(r - min);
+		if(h < 0)
+			h += 6;
+		return h / 6;
+	}
+	else if(g >= b && g >= r)
+	{
+		float min = std::min(b, r);
+		saturation = (g - min)/g;
+
+		return ((b - r)/(g - min) + 2)/6;
+	}
+	else if(b >= g && b >= r)
+	{
+		float min = std::min(r, g);
+		saturation = (b - min)/b;
+
+		return ((r - g)/(b - min) + 4)/6;
+	}
+
+	return 0;
+}
+
+Vector3 GetFromQrgb(QRgb col)
+{
+	return Vector3::fromColor(qRed(col), qGreen(col), qBlue(col));
+}
 
 void MainWindow::applyPigments()
-{/*
-	if(pigments[0] == 128 && pigments[1] == 128 && pigments[2] == 128)
-	{
-		render = original;
-		return;
-	}*/
+{
+#if 0
+	float acid     = std::cos(pigments[0]*M_PI/256);
+	float electric = std::sin(pigments[1]*M_PI/128);
+
+	const float acid = (pigments[0] > 128? pigments[0] - 128 : 128 - pigments[0])/128.f;
 
 	render = QImage(original.size(), QImage::Format_ARGB32);
 	render.fill(0);
@@ -249,50 +333,86 @@ void MainWindow::applyPigments()
 	{
 		for(int x = 0; x < original.width(); ++x)
 		{
-			QRgb pixel = original.pixel(x, y);
+			QRgb px = original.pixel(x, y);
 
-			if(qAlpha(pixel) == 0)
+			if(qAlpha(px) == 0)
+				continue;
+
+			if(x == 0 || x == original.width()-1
+			|| y == 0 || y == original.height()-1)
 			{
+				render.setPixel(x, y, px);
 				continue;
 			}
 
-//get rgb as floats
-			float r = qRed(pixel)/255.f;
-			float g = qGreen(pixel)/255.f;
-			float b = qBlue(pixel)/255.f;
+			Vector3 above = GetFromQrgb(original.pixel(x, y-1));
+			Vector3 left = GetFromQrgb(original.pixel(x-1, y));
+			Vector3 self = GetFromQrgb(original.pixel(x, y));
 
-//get luminance
-			float Y = sqrt(r*r + g*g + b*b);
+			Vector3 elecV = self.cross(above);
+			Vector3 elecH = self.cross(left);
 
-			if(!Y)
-			{
-				render.setPixel(x, y, pixel);
-				continue;
-			}
+			Vector3 elec(sqrt(elecV.x*elecH.y), sqrt(elecV.y*elecH.z), sqrt(elecV.z*elecH.x);
+/*
+			float dt = (elecV.length() + elecH.length())*acid*255;
 
-			r = applyPigment(r/Y, pigments[0]);
-			g = applyPigment(g/Y, pigments[1]);
-			b = applyPigment(b/Y, pigments[2]);
-
-//correct luminance
-			float length = sqrt(r*r + g*g + b*b);
-			if(length)
-			{
-				Y = Y/length;
-//correct color
-				r = r*Y;
-				g = g*Y;
-				b = b*Y;
-			}
-
-			r = std::max(0, std::min(255, (int) (r*255)));
-			g = std::max(0, std::min(255, (int) (g*255)));
-			b = std::max(0, std::min(255, (int) (b*255)));
-
-			pixel = qRgba(r, g, b, qAlpha(pixel));
-			render.setPixel(x, y, pixel);
+			QColor pixel((uint8_t)(qRed(px) + dt),
+						 (uint8_t)(qGreen(px) + dt),
+					     (uint8_t)(qBlue(px) + dt),
+						  qAlpha(px));
+*/
+			px = qRgb(elec.red(), elec.green(), elec.blue());
+			render.setPixel(x, y, px);
 		}
 	}
+#endif
+
+
+	float Pr = (pigments[0]/255.f);
+	float Pg = (pigments[1]/255.f);
+	float Pb = (pigments[2]/255.f);
+
+	float saturation = 0;
+	float value = std::max(Pr, std::max(Pg, Pb));
+	float hue = -GetHue(Pr, Pg, Pb, saturation);
+
+	const float absRot = (pigments[3] > 128? pigments[3] - 128 : 128 - pigments[3])/128.f;
+
+	render = QImage(original.size(), QImage::Format_ARGB32);
+	render.fill(0);
+
+	for(int y = 0; y < original.height(); ++y)
+	{
+		for(int x = 0; x < original.width(); ++x)
+		{
+			QRgb px = original.pixel(x, y);
+
+			if(qAlpha(px) == 0)
+				continue;
+
+			QColor pixel(qRed(px)*(1-absRot) + qBlue(px)*absRot, qGreen(px), qRed(px)*absRot + qBlue(px)*(1-absRot), qAlpha(px));
+
+			qreal H, S, V;
+			pixel.getHsvF(&H, &S, &V);
+			float t = V*(1-V);
+			if(H >= 0)
+			{
+				H += hue;
+				if(H > 1.0)
+					H -= 1.0;
+				if(H < 0)
+					H += 1.0;
+				pixel.setHsvF(H, S*saturation,  V*(1-t) + value*t);
+			}
+			else
+			{
+				pixel.setHsvF(0, S*saturation, V*(1-t) + value*t);
+			}
+
+
+			render.setPixel(x, y, pixel.rgba());
+		}
+	}//*/
 }
 
 

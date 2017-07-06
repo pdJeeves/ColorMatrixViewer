@@ -16,6 +16,18 @@ Quaternion::Quaternion(double roll, double pitch, double yaw)
 	z = t1 * t2 * t4 - t0 * t3 * t5;
 }
 
+Quaternion::Quaternion(Vector3 axis, double angle)
+{
+	double sin = std::sin(angle/2);
+	double cos = std::cos(angle/2);
+	axis.normalize();
+
+	x = axis.x*sin;
+	y = axis.y*sin;
+	z = axis.z*sin;
+	w = cos;
+}
+
 Vector3 Quaternion::rotate(const Vector3 & v) const
 {
 	Vector3 u(x, y, z);

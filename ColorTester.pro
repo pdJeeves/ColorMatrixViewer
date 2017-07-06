@@ -13,24 +13,26 @@ TEMPLATE = app
 
 LIBS += -ldrm
 
-SOURCES += main.cpp\
-        mainwindow.cpp \
-    viewwidget.cpp \
-    matrixeditor.cpp \
-    rotationeditor.cpp \
-    quaternion.cpp \
-    vector3.cpp \
-    pigmenteditor.cpp
+INCLUDEPATH += src
 
-HEADERS  += mainwindow.h \
-    viewwidget.h \
-    matrixeditor.h \
-    rotationeditor.h \
-    quaternion.h \
-    vector3.h \
-    pigmenteditor.h
+SOURCES += src/main.cpp\
+        src/mainwindow.cpp \
+    src/viewwidget.cpp \
+    src/matrixeditor.cpp \
+    src/rotationeditor.cpp \
+    src/quaternion.cpp \
+    src/vector3.cpp \
+    src/pigmenteditor.cpp
 
-FORMS    += mainwindow.ui \
-    matrixeditor.ui \
-    rotationeditor.ui \
-    pigmenteditor.ui
+HEADERS  += src/mainwindow.h \
+    src/viewwidget.h \
+    src/matrixeditor.h \
+    src/rotationeditor.h \
+    src/quaternion.h \
+    src/vector3.h \
+    src/pigmenteditor.h
+
+FORMS    += src/mainwindow.ui \
+    src/matrixeditor.ui \
+    src/rotationeditor.ui \
+    src/pigmenteditor.ui

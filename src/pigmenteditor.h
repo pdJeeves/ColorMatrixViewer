@@ -23,10 +23,10 @@ public:
 	void updateDisplay(int);
 
 private:
-	uint8_t original[3];
+	uint8_t original[4];
 
 	MainWindow * window;
-	std::array<QSlider*, 3> sliders;
+	std::array<QSlider*, 4> sliders;
 	Ui::PigmentEditor *ui;
 };
 

@@ -32,7 +32,7 @@ public:
 
 	uint8_t matrix[MATRIX_SIZE];
 	uint8_t angles[3];
-	uint8_t pigments[3];
+	uint8_t pigments[4];
 
 	static float applyPigment(float color, float pigment);
 
