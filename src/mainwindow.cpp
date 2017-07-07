@@ -318,8 +318,78 @@ Vector3 GetFromQrgb(QRgb col)
 	return Vector3::fromColor(qRed(col), qGreen(col), qBlue(col));
 }
 
+QRgb rawColor(int r, int g, int b, int a = 255)
+{
+	return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
 void MainWindow::applyPigments()
 {
+	float Pr = (pigments[0]/128.f);
+	float Pg = (pigments[1]/128.f);
+	float Pb = (pigments[2]/128.f);
+
+	float saturation = 0;
+	float value = std::max(Pr, std::max(Pg, Pb));
+	float hue = -GetHue(Pr, Pg, Pb, saturation);
+
+	const float swap_rg = (pigments[3] > 128? pigments[3] - 128 : 128 - pigments[3])/128.f;
+	const float swap_gb = (pigments[4] > 128? pigments[4] - 128 : 128 - pigments[4])/128.f;
+	const float swap_rb = (pigments[5] > 128? pigments[5] - 128 : 128 - pigments[5])/128.f;
+
+	render = QImage(original.size(), QImage::Format_ARGB32);
+	render.fill(0);
+
+	for(int y = 0; y < original.height(); ++y)
+	{
+		for(int x = 0; x < original.width(); ++x)
+		{
+			QRgb px = original.pixel(x, y);
+
+			if(qAlpha(px) == 0)
+				continue;
+
+			Vector3 color(qRed(px)/256.f, qGreen(px)/256.f, qBlue(px)/256.f);
+			float brightness = (color.x + color.y+color.z)/3;// sqrt(color.x*color.x*.241 + color.y*color.y*.691+ color.z*color.z*.068);
+
+			float t = (brightness)*(1-brightness);
+
+			float chroma = std::max(color.x, std::max(color.y, color.z)) -  std::min(color.x, std::min(color.y, color.z));
+			float db = (Pr + Pg + Pb)/6 -.5;
+
+			color = Vector3(color.x*(1-swap_rg)*(1-swap_rb) + color.y*(swap_rg) + color.z*(swap_rb)
+			,
+							color.y*(1-swap_rg)*(1-swap_gb) + color.x*(swap_rg) + color.z*(swap_gb)
+			,
+							color.z*(1-swap_gb)*(1-swap_rb) + color.x*(swap_rb) + color.y*(swap_gb)
+			);
+
+			color.x = color.x*(1-chroma) + (Pr <= 1.f? Pr*color.x : color.x + (1-color.x)*(Pr-1))*chroma + db;
+			color.y = color.y*(1-chroma) + (Pg <= 1.f? Pg*color.y : color.y + (1-color.y)*(Pg-1))*chroma + db;
+			color.z = color.z*(1-chroma) + (Pb <= 1.f? Pb*color.z : color.z + (1-color.z)*(Pb-1))*chroma + db;
+
+			color.x = std::max(0.f, std::min(1.f, color.x));
+			color.y = std::max(0.f, std::min(1.f, color.y));
+			color.z = std::max(0.f, std::min(1.f, color.z));
+
+			float luma = (color.x + color.y+color.z)/3;
+			//sqrt(color.x*color.x*.241 + color.y*color.y*.691+ color.z*color.z*.068);
+
+			luma  = (brightness*(1-t) + luma*t) - luma;
+
+			color.x += luma;
+			color.y += luma;
+			color.z += luma;
+
+			color.x = std::max(0.f, std::min(1.f, color.x));
+			color.y = std::max(0.f, std::min(1.f, color.y));
+			color.z = std::max(0.f, std::min(1.f, color.z));
+
+			px = qRgba(color.x*255, color.y*255, color.z*255, qAlpha(px));
+			render.setPixel(x, y, px);
+		}
+	}//*/
+
 #if 0
 	float acid     = std::cos(pigments[0]*M_PI/256);
 	float electric = std::sin(pigments[1]*M_PI/128);
@@ -366,7 +436,7 @@ void MainWindow::applyPigments()
 		}
 	}
 #endif
-
+#if 0
 
 	float Pr = (pigments[0]/255.f);
 	float Pg = (pigments[1]/255.f);
@@ -413,6 +483,7 @@ void MainWindow::applyPigments()
 			render.setPixel(x, y, pixel.rgba());
 		}
 	}//*/
+#endif
 }
 
 

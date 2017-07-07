@@ -1,5 +1,6 @@
 #ifndef PIGMENTEDITOR_H
 #define PIGMENTEDITOR_H
+#include "mainwindow.h"
 #include <QDialog>
 #include <array>
 
@@ -23,10 +24,10 @@ public:
 	void updateDisplay(int);
 
 private:
-	uint8_t original[4];
+	uint8_t original[sizeof(((MainWindow*)0L)->pigments)];
 
 	MainWindow * window;
-	std::array<QSlider*, 4> sliders;
+	std::array<QSlider*, sizeof(((MainWindow*)0L)->pigments)> sliders;
 	Ui::PigmentEditor *ui;
 };
 

@@ -17,6 +17,9 @@ ui(new Ui::PigmentEditor)
 	sliders[1] = ui->horizontalSlider_2;
 	sliders[2] = ui->horizontalSlider_3;
 	sliders[3] = ui->horizontalSlider_4;
+	sliders[4] = ui->horizontalSlider_5;
+	sliders[5] = ui->horizontalSlider_6;
+
 
 	for(size_t i = 0; i < sliders.size(); ++i)
 	{
